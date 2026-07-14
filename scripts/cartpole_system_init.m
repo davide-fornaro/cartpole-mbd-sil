@@ -1,5 +1,5 @@
 % =========================================================================
-% NONLINEAR SIMULATION: CART-POLE SYSTEM WITH LQR + LUENBERGER OBSERVER
+% NONLINEAR SIMULATION: CART-POLE SYSTEM WITH LQI + LUENBERGER OBSERVER
 % =========================================================================
 clearvars; close all; clc;
 
@@ -14,11 +14,11 @@ p.beta_M = 0.5;     % [N*s/m] Cart viscous friction
 p.beta_m = 0.005;   % [N*m*s/rad] Joint viscous friction
 
 % Nonlinear Friction (Stribeck & Coulomb)
-p.mu_c   = 0.05;    % [-] Kinetic (Coulomb) friction coefficient
-p.mu_s   = 0.08;    % [-] Static friction coefficient (Stiction)
+p.mu_c   = 0.025;    % [-] Kinetic (Coulomb) friction coefficient
+p.mu_s   = 0.04;    % [-] Static friction coefficient (Stiction)
 p.v_s    = 0.05;    % [m/s] Stribeck velocity threshold (transitions static->kinetic)
-p.k      = 100;     % [1/m] Stribeck sharpness factor (higher = sharper transition)
-p.ff_compensation = 0.8;
+p.k      = 5;       % [1/m] Stribeck sharpness factor (higher = sharper transition)
+p.ff_compensation = 0.90; 
 
 % Hardware Limits
 U_MAX       = 20;   % [N] Maximum force from the DC motor
@@ -47,19 +47,24 @@ D = [
 B_u = B_full(:, 1);
 B_d = B_full(:, 2:3);
 
-%% Control & Estimation Design (LQR + Observer)
-% LQR Controller
-Q = diag([100, 1, 500, 10]);
-R = 1;
-K = lqr(A, B_u, Q, R);
+%% Control & Estimation Design (LQI + Observer)
+C_i = [1, 0, 0, 0];
+A_aug = [A, zeros(4,1); C_i, 0];
+B_aug = [B_u; 0];
 
-% Luenberger Observer (Kalman Filter is recommended for real hardware)
-observer_poles = [-15, -16, -17, -18];
-L = place(A', C', observer_poles)';
+Q_aug = diag([10, 1, 1000, 1, 50]);
+R_aug = 1;
+
+K = lqr(A_aug, B_aug, Q_aug, R_aug);
 
 % LQE (Kalman Filter)
-% Q_n = diag([10, 100, 10, 100]);
-% R_n = diag([1e-5, 1e-5]);
+Q_n = diag([1e-2, 1e-1, 1e-2, 1e-1]);
+R_n = diag([1e-3, 1e-3]);
+G_noise = eye(4);
+G = eye(4);
 
-% G = eye(4);
-% [L, P, E] = lqe(A, G, C, Q_n, R_n);
+[L, P, E] = lqe(A, G, C, Q_n, R_n);
+
+% Luenberger Observer (Kalman Filter is recommended for real hardware)
+% observer_poles = [-15, -16, -17, -18];
+% L = place(A', C', observer_poles)';
