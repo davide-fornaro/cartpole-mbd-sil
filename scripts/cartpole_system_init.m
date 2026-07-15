@@ -18,31 +18,20 @@ p.mu_c   = 0.025;    % [-] Kinetic (Coulomb) friction coefficient
 p.mu_s   = 0.04;    % [-] Static friction coefficient (Stiction)
 p.v_s    = 0.05;    % [m/s] Stribeck velocity threshold (transitions static->kinetic)
 p.k      = 5;       % [1/m] Stribeck sharpness factor (higher = sharper transition)
-p.ff_compensation = 0.90; 
+p.ff_compensation = 0.90;
 
 % Hardware Limits
-U_MAX       = 20;   % [N] Maximum force from the DC motor
-TRACK_LIMIT = 0.6;  % [m] Maximum physical rail distance from center (+/- 0.6m)
+p.U_MAX       = 20;   % [N] Maximum force from the DC motor
+p.TRACK_LIMIT = 0.6;  % [m] Maximum physical rail distance from center (+/- 0.6m)
 
 %% Linearized Model Matrices (Evaluated at the upright equilibrium)
-A = [
-     0, 1, 0, 0;
-     0, -p.beta_M/p.M, -p.g*p.m/p.M, p.beta_m/(p.M*p.l);
-     0, 0, 0, 1;
-     0, p.beta_M/(p.M*p.l), p.g*(p.M + p.m)/(p.M*p.l), p.beta_m*(-p.M - p.m)/(p.M*p.l^2*p.m)
-     ];
-B_full = [
-     0, 0, 0;
-     1/p.M, 1/p.M, 0;
-     0, 0, 0;
-     -1/(p.M*p.l), -1/(p.M*p.l), 1/(p.l^2*p.m)
-     ];
+
+A = [0 1 0 0; 0 -p.beta_M./p.M -p.g.*p.m./p.M p.beta_m./(p.M.*p.l); 0 0 0 1; 0 p.beta_M./(p.M.*p.l) p.g.*(p.M + p.m)./(p.M.*p.l) p.beta_m.*(-p.M - p.m)./(p.M.*p.l.^2.*p.m)];
+B_full = [0 0 0; 1./p.M 1./p.M 0; 0 0 0; -1./(p.M.*p.l) -1./(p.M.*p.l) 1./(p.l.^2.*p.m)];
+C = [1 0 0 0; 0 0 1 0];
 C = [1, 0, 0, 0;   % Sensor 1: Cart position encoder
      0, 0, 1, 0];  % Sensor 2: Pendulum angle encoder
-D = [
-     0, 0, 0;
-     0, 0, 0
-     ];
+D = [0 0 0; 0 0 0];
 
 B_u = B_full(:, 1);
 B_d = B_full(:, 2:3);
@@ -68,3 +57,15 @@ G = eye(4);
 % Luenberger Observer (Kalman Filter is recommended for real hardware)
 % observer_poles = [-15, -16, -17, -18];
 % L = place(A', C', observer_poles)';
+
+
+% Simulation Initialization
+
+% Initial Physical State (Reality): Pendulum tilted by 15 degrees (0.26 rad)
+x0_phys = [0; 0; 0.26; 0];
+
+% Initial Software State (Microcontroller): Starts at zero (no knowledge)
+x0_hat = [0; 0; 0.26; 0];
+
+% Initial Integral State: Starts at zero (no accumulated error)
+x0_i = 0;
