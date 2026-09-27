@@ -90,11 +90,11 @@ C_obs = eye(4);
 D_obs = zeros(4, 3);
 
 %% Swing-Up Controller Parameters (Energy-Based)
-p.swing.k_E = 25.0;
-p.swing.k_p = 40.0;
-p.swing.k_d = 12.0;
-p.swing.th_thresh = deg2rad(40);
-p.swing.kick_amp  = 3.0; % [N] Forza asimmetrica per rompere l'equilibrio a theta = pi
+p.swing.k_E = 25.0; % [N/(J*rad/s)] Energy-shaping feedback gain
+p.swing.k_p = 40.0; % [N] Cart position penalty gain
+p.swing.k_d = 12.0; % [N*s/m] Viscous damping gain for cart velocity
+p.swing.th_thresh = deg2rad(40); % [rad] Angular threshold
+p.swing.kick_amp  = 3.0; % [N] Asymmetric force to break equilibrium at theta = pi
 
 %% Simulation Initialization
 t_span = [0 180]; % [s] Total simulation time
