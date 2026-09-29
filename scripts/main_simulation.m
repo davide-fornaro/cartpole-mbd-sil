@@ -9,7 +9,7 @@ ode_opts = odeset('Events', @(t,z) track_limit(t, z, p.TRACK_LIMIT), 'MaxStep', 
 
 %% Numerical Integration
 disp('Starting nonlinear ODE integration...');
-[t_out, Z] = ode15s(@(t, z) system_dynamics(t, z, p, K_aug, L, p.U_MAX, disturbances_func, ref_func), t_span, z0, ode_opts);
+[t_out, Z] = ode15s(@(t, z) system_dynamics(t, z, p, K_aug, L, disturbances_func, ref_func), t_span, z0, ode_opts);
 
 %% Data Extraction & Analysis
 x_real     = Z(:, 1);
@@ -27,7 +27,7 @@ for i = 1:length(t_out)
     x_i_est  = Z(i, 9);
     y_meas_i = [Z(i, 1); Z(i, 3)];
     
-    [u_history(i), ~, ~, u_ff_history(i)] = controller(t_i, x_est, x_i_est, y_meas_i, p, K_aug, L, p.U_MAX, ref_func);
+    [u_history(i), ~, ~, u_ff_history(i)] = controller(t_i, x_est, x_i_est, y_meas_i, p, K_aug, L, ref_func);
 end
 
 %% Data Visualization

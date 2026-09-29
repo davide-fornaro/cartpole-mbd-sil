@@ -1,4 +1,4 @@
-function [u, x_hat_next, x_i_next, u_ff] = controller_discrete_step(x_hat, x_i, y_meas, p, Kd_aug, Ld, U_MAX, ref)
+function [u, x_hat_next, x_i_next, u_ff] = controller_discrete_step(x_hat, x_i, y_meas, p, Kd_aug, Ld, ref)
     
     x_hat_cart = x_hat(1);
     dx_hat     = x_hat(2);
@@ -12,7 +12,7 @@ function [u, x_hat_next, x_i_next, u_ff] = controller_discrete_step(x_hat, x_i, 
     x_lqi = [x_hat_cart - ref; dx_hat; th_err_lqi; dth_hat];
 
     % Estimated friction computation
-    N_approx_est  = max(0, (-p.beta_m*sin(th_hat)*dth_hat + p.l*(p.M*p.g + p.m*(p.g*cos(th_hat) - p.l*dth_hat^2)*cos(th_hat)))/p.l);
+    N_approx_est  = compute_normal_force_approx(th_hat, dth_hat, p);
     F_coulomb_est = p.mu_c * N_approx_est;
     u_ff = p.ff_compensation * F_coulomb_est * tanh(p.k * dx_hat);
 
@@ -45,12 +45,12 @@ function [u, x_hat_next, x_i_next, u_ff] = controller_discrete_step(x_hat, x_i, 
     u_req_unclamped = weight_LQI * u_lqi + (1 - weight_LQI) * u_swing + u_ff;
 
     % Saturation clamp
-    u = max(min(u_req_unclamped, U_MAX), -U_MAX);
+    u = max(min(u_req_unclamped, p.U_MAX), -p.U_MAX);
 
     error_i = weight_LQI * (y_meas(1) - ref);
     
     % Anti-Windup
-    if (u_req_unclamped >= U_MAX && error_i > 0) || (u_req_unclamped <= -U_MAX && error_i < 0)
+    if (u_req_unclamped >= p.U_MAX && error_i > 0) || (u_req_unclamped <= -p.U_MAX && error_i < 0)
         dx_i = 0; % Clamp integral action
     else
         dx_i = error_i;
@@ -61,26 +61,11 @@ function [u, x_hat_next, x_i_next, u_ff] = controller_discrete_step(x_hat, x_i, 
 
     % Constant-Gain Nonlinear Observer (Prediction Step)
     
-    sin_th = sin(th_hat);
-    cos_th = cos(th_hat);
+    F_ext_hat = 0;
+    M_ext_hat = 0;
+    q_ddot_est = compute_accelerations(dx_hat, th_hat, dth_hat, u, p, F_ext_hat, M_ext_hat);
 
-    M11 = p.M + p.m*sin_th^2;
-    M21 = p.m*cos_th;
-    M22 = p.l*p.m;
-
-    F1 = -F_coulomb_est * tanh(dx_hat*p.k) + dth_hat*p.beta_m*cos_th/p.l - dx_hat*p.beta_M + p.m*(dth_hat^2*p.l - p.g*cos_th)*sin_th + u;
-    F2 = -dth_hat*p.beta_m/p.l + p.g*p.m*sin_th;
-                  
-    det_M = M11 * M22;
-    inv_M11 = 1 / M11;
-    inv_M21 = -M21 / det_M;
-    inv_M22 = 1 / M22;
-
-    ddx_hat_est = inv_M11 * F1;
-    ddth_hat_est = inv_M21 * F1 + inv_M22 * F2;
-
-    % Non-linear state derivative
-    f_x_hat = [dx_hat; ddx_hat_est; dth_hat; ddth_hat_est];
+    f_x_hat = [dx_hat; q_ddot_est(1); dth_hat; q_ddot_est(2)];
 
     % Discrete Constant-Gain Innovation Step
     y_hat = [x_hat_cart; th_hat];

@@ -27,7 +27,7 @@ for k = 1:N_steps
     ref    = ref_func(t_k);
     
     % Microcontroller execution (ZOH generation)
-    [u_real, x_hat_next, x_i_next, u_ff_real] = controller_discrete_step(x_hat, x_i, y_meas, p, Kd_aug, Ld, p.U_MAX, ref);
+    [u_real, x_hat_next, x_i_next, u_ff_real] = controller_discrete_step(x_hat, x_i, y_meas, p, Kd_aug, Ld, ref);
     
     % Data logging
     X_real_log(k, :) = x_phys';
@@ -42,8 +42,7 @@ for k = 1:N_steps
     
     % Physical plant progression (Between k and k+1)
     if k < N_steps
-        [~, Z_ode] = ode15s(@(t, z) cartpole_plant(t, z, u_real, p, disturbances_func), ...
-                           [t_k, t_k + p.Ts], x_phys);
+        [~, Z_ode] = ode15s(@(t, z) cartpole_plant(t, z, u_real, p, disturbances_func), [t_k, t_k + p.Ts], x_phys);
         
         x_phys = Z_ode(end, :)';
     end
