@@ -16,7 +16,6 @@ function [u, x_hat_next, x_i_next, u_ff] = controller_discrete_step(x_hat, x_i, 
     F_coulomb_est = p.mu_c * N_approx_est;
     u_ff = p.ff_compensation * F_coulomb_est * tanh(p.k * dx_hat);
 
-    
     % LQI Stabilization
     u_lqi = -Kd_aug(1:4) * x_lqi - Kd_aug(5) * x_i;
 
@@ -60,7 +59,6 @@ function [u, x_hat_next, x_i_next, u_ff] = controller_discrete_step(x_hat, x_i, 
     x_i_next = x_i + p.Ts * dx_i;
 
     % Constant-Gain Nonlinear Observer (Prediction Step)
-    
     F_ext_hat = 0;
     M_ext_hat = 0;
     q_ddot_est = compute_accelerations(dx_hat, th_hat, dth_hat, u, p, F_ext_hat, M_ext_hat);
